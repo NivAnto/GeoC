@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<style type="text/css">
+	   html { height: 100% }
+	   body { height: 100%; margin: 0; padding: 0 }
+	
+</style>"
+<script type="text/javascript" src="/nowjs/now.js"></script>
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false&v=3&libraries=geometry"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+
+
+<script>
+
+var Rooms = [];
+
+function RoomOb(lat, lng, roomName, owner, users) {
+    this.lat = lat;
+    this.lng  = lng;
+    this.roomName = roomName;
+    this.owner = owner;
+    this.users =[owner];
+ }
+
+//Handling the Nowjs functions 
+$(document).ready(function(){
+now.ready(function(){
+
+
+
+ now.eliminateRoomMarker = function (room){
+     console.log('server doing hard work');
+     
+ 
+   };
+ now.usr_name = prompt("What's your name?", "");
+
+ now.receiveMessage = function(usr_info , message){
+    $("#messages").append("<br>" + usr_info + ": " + message);
+ }
+
+  $('#server-room').change(function(){
+    $("#messages").html('');
+    now.changeRoom($('#server-room').val());
+    now.currentRoom = $('#server-room').val();
+  });
+
+// By default pick the first chatroom
+//now.currentRoom= $('#server-room').val();
+//  now.changeRoom($('#server-room').val());
+  
+  $("#send-button").click(function(){
+    now.distributeMessage($("#text-input").val());
+    $("#text-input").val("");
+  });
+
+  now.placeRoom = function(room){
+    //now.changeRoom(room.roomName);
+    var pos = new google.maps.LatLng(room.lat,room.lng);
+    var marker1 = createMarker(pos,room,room.roomName,room.owner,img,1,map);
+    // wont work :now.Gmarkers.push(marker1);
+    show(3);
+  };
+
+  now.loadRooms = function (Rooms){
+  for (var key in now.roomsList){ 
+    console.log(now.roomsList[key].roomName);
+    now.placeRoom(now.roomsList[key]);
+    }
+  };
+
+
+  
+
+  console.log('Initialize...');
+  initialize();
+  
+});//belongs to Now ready
+});//belongs to jQuery ready
+</script>
+
+<script type="text/javascript">
+
+
+
+
+var map;
+//Defining self position and placing self marker on map
+now.pos = new google.maps.LatLng(32.0741398,34.7767521);
+
+var mypos = new google.maps.LatLng(32.0741398,34.7767521);
+var mypos_mark = new google.maps.Marker({
+  position: mypos, 
+  map: map, 
+  title: 'You are here !',
+  visible : true
+  }); 
+					 
+//Single info window instance
+var infowindow = new google.maps.InfoWindow({ content: 'some_text', maxWidth: 150 });		
+
+//gmarkers management
+
+var gmarkers = [];
+var on_map_gmarkers=[];				 
+
+//geocoder		
+var geocoder;		 
+	
+//map side bar 
+var side_bar_html = "";
+
+	
+function codeAddress() {
+  var address = document.getElementById("address").value;
+  geocoder.geocode( { 'address': address}, function(results, status) {
+    if (status == google.maps.GeocoderStatus.OK) {
+      //alert("Geocode was  successful !");
+      mypos = results[0].geometry.location;
+      map.setCenter(results[0].geometry.location);
+      infowindow.close();
+      //calc new ditances for all markers 
+      for (var i=0; i<gmarkers.length; i++) {
+        gmarkers[i].dis = google.maps.geometry.spherical.computeDistanceBetween (mypos, gmarkers[i].position);  
+      } 	 
+      //Set my pos marker
+      mypos_mark.setMap(null);
+      mypos_mark.position = mypos;      			 	 	
+      mypos_mark.setMap(map);
+      // print new side bar according to new distances 
+      show(document.getElementById("meetbox").value);
+    } 
+    else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+  });
+}
+
+		
+function HomeControl(controlDiv, map) {
+  // Set CSS styles for the DIV containing the control
+  // Setting padding to 5 px will offset the control
+  // from the edge of the map
+  controlDiv.style.padding = '5px';
+  
+  // Set CSS for the control border
+  var controlUI = document.createElement('DIV');
+  controlUI.style.backgroundColor = 'white';
+  controlUI.style.overglow = 'auto';
+  controlUI.style.borderStyle = 'solid';
+  controlUI.style.borderWidth = '2px';
+  controlUI.style.cursor = 'pointer';
+  controlUI.style.textAlign = 'center';
+  controlUI.title = 'Click to show pics';
+  controlDiv.appendChild(controlUI);
+            
+  // Set CSS for the control interior
+  var controlText = document.createElement('DIV');
+  controlText.style.fontFamily = 'Arial,sans-serif';
+  controlText.style.fontSize = '12px';
+  controlText.style.paddingLeft = '4px';
+  controlText.style.paddingRight = '4px';
+  controlText.innerHTML = '<b>Show me some pictures !</b>';
+  controlUI.appendChild(controlText);
+            
+  // Setup the click event listeners: simply set the map to
+  google.maps.event.addDomListener(controlUI, 'click', function() { 
+    if (document.getElementById('side_bar_col').style.display == 'none'){
+      document.getElementById('side_bar_col').style.display = 'block';
+    }
+    else {
+      document.getElementById('side_bar_col').style.display = 'none';
+    }
+  });
+}
+
+
+
+function initialize() {
+  document.getElementById('side_bar_col').style.display = 'none'; 
+  var latlng = mypos;
+  var myOptions = {
+    zoom: 16,
+    center: latlng,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+				 
+  map = new google.maps.Map(document.getElementById("map_canvas"),myOptions);
+  mypos_mark.setMap(map);
+  //Adds costum controler - create the DIV to hold the control and call the HomeControl() constructor passing in this DIV.
+  var homeControlDiv = document.createElement('DIV');
+  var homeControl = new HomeControl(homeControlDiv, map);
+  homeControlDiv.index = 1;
+  map.controls[google.maps.ControlPosition.BOTTOM].push(homeControlDiv);
+  
+  // ====== Create a Client Geocoder ======
+  geocoder = new google.maps.Geocoder();
+				 
+  img = '<div align="center"> <img   width="80" height="100" src="http://excellence.technion.ac.il/Excellence/UploadFiles/pgallery/1249167083.jpg" alt="Angry face" /></div>';
+  img3 = '<div align="center"> <img   width="80" height="100" src="http://www.wharf.co.uk/06Apr03Face.jpg" alt="Angry face" /></div>';
+  img2 = '<div align="center"> <img   width="80" height="100" src="http://www.miki.org.il/wp-content/uploads/2008/03/davit.jpg" alt="Angry face" /></div>';
+  img4 = '<div align="center"> <img   width="80" height="100" src="http://pokerroomreview.com/wp-content/uploads/2010/06/Poker-Drag-Queen.jpg" alt="Angry face" /></div>';
+  now.loadRooms(now.roomsList);  
+//create marker data should contain : Latlng[0],Latlng[1],Name
+  var c_lng = prompt("34.7777384 ?", "");
+  var r = now.launchRoom(32.0744368,c_lng, now.usr_name);
+  //now.changeRoom(r);
+
+
+
+  setTimeout(function(){
+    //var thepos = now.positions[0];
+    //alert(thepos);
+    //var mypos1 = new google.maps.LatLng(thepos[0],thepos[1]);
+    //var marker1 = createMarker(mypos1,"Arren","Call me now...",img,1,map);
+    //show(3);
+   }, 500); 
+
+  //var mypos2 = new google.maps.LatLng(32.0743997,34.774868);
+  //var marker2 = createMarker(mypos2,"Hozelito","I'm so hot !",img2,1,map)	
+  //var mypos3 = new google.maps.LatLng(32.0742443,34.7699741);   
+  //var marker3 = createMarker(mypos3,"Jenny","555-LETSPARTY",img3,0,map)
+  //var mypos4 = new google.maps.LatLng(32.0703316,34.7702);   
+  //var marker4 = createMarker(mypos4,"Latifa","Big and hairy",img4,2,map)
+  
+  }
+	
+  // == shows all markers of a particular category, and ensures the checkbox is checked ==
+  function show(category) {
+    infowindow.close();
+    var side_bar = "";
+    gmarkers.sort(function(a, b){return a.dis-b.dis})
+    on_map_gmarkers = [];
+    for (var i=0; i<gmarkers.length; i++) {
+      if ( (gmarkers[i].cat == category) || (category==3) ) {
+        on_map_gmarkers.push(gmarkers[i]);
+        gmarkers[i].setVisible(true);
+	name = gmarkers[i].title;
+	var dis_res =  google.maps.geometry.spherical.computeDistanceBetween (mypos, gmarkers[i].position); 
+	dis_res = dis_res.toFixed(0);
+	gmarkers[i].dis =  dis_res ;
+	side_bar +=  '<a href="javascript:myclickbyid(' + (gmarkers[i].id) + ')">'  + gmarkers[i].pic;
+	//side_bar += '<a href="javascript:myclickbyid(' + (gmarkers[i].id) + ')">' + gmarkers[i].dis  + ' meters<\/a><br>';
+        }
+      else {
+        gmarkers[i].setVisible(false);
+      }		    
+    }
+  document.getElementById("side_bar").innerHTML = side_bar;
+  }
+	 
+//A function to create the marker and set up the event window
+function createMarker(point,room,name,info,pic,category,map) {
+  var mark = new google.maps.Marker({
+    position: point, 
+    map: map, 
+    title: name,
+    visible : false
+  }); 
+  mark.room = room; //store roomObj inside marker
+  mark.info = '<BR> <div align="center">' + info + ' </div>';  
+  mark.pic = pic;
+  mark.id = gmarkers.length;
+  mark.cat = category;
+  mark.dis = google.maps.geometry.spherical.computeDistanceBetween (mypos, point); 
+  mark.content = mark.pic + mark.info ;
+  gmarkers.push(mark);	
+  console.log('CreateMarker function was called to place the marker --> ' + name );		 
+  //Add listener
+  google.maps.event.addListener(mark, 'click', function() {
+    now.changeRoom(name);
+    infowindow.close();
+    var mark_pos_in_gmarkers;
+    for (var i=0; i<gmarkers.length; i++) {
+	if ( on_map_gmarkers[i] == mark) {
+          mark_pos_in_gmarkers=i;
+     }
+   } 
+    var back_html = '<BR> <div align="center"> <a href="javascript:myclickbypos(' + (mark_pos_in_gmarkers-1) +  ')"><img align="middle" src="http://cdn1.iconfinder.com/data/icons/sem_labs_icon_pack/icons/arrow_left.png" /></a>';
+    var for_html = '<a href="javascript:myclickbypos(' + (mark_pos_in_gmarkers+1) +  ')"><img align="middle" src="http://cdn1.iconfinder.com/data/icons/sem_labs_icon_pack/icons/arrow_right.png" /></a></div>';
+    var buttom_html = ' ' + mark.dis + ' meters ';
+    //infowindow.setContent( mark.content + back_html + buttom_html + for_html  );
+    infowindow.setContent( mark.content  + back_html + buttom_html + for_html);
+    infowindow.open(map,mark,{maxWidth:'600'});
+  });
+				
+  // add a line to the side_bar html : THIS SECTION MOVED TO THE show(categoty) BLOCK
+  //side_bar_html += '<a href="javascript:myclick(' + (gmarkers.length-1) + ')">' + name + '<\/a><br>';
+  //document.getElementById("side_bar").innerHTML = side_bar_html;
+  return mark;
+}
+	  
+
+// This function picks up the click and opens the corresponding info window
+function myclickbyid(mark_id) {
+  for (var i=0; i<gmarkers.length; i++) {
+    if (mark_id == gmarkers[i].id) {
+      google.maps.event.trigger(gmarkers[i], "click");
+      console.log('clicked by id');
+    }
+  }
+}
+	  
+
+function myclickbypos(i) {
+  if (i==-1) {i=on_map_gmarkers.length-1};
+  if (i > on_map_gmarkers.length-1 ) {i=0};
+  google.maps.event.trigger( on_map_gmarkers[i], "click");
+  console.log('clicked by pos');
+}
+	  
+	 
+//body onload="initialize()">
+
+</script>
+
+
+    <title></title>
+
+ 
+</head>
+  <body <body>
+    <div id="header" style="width:100%; height:5%" align="center">
+    <form name=search_bar onsubmit="showAddress(); return false" action="#">
+    Set your location : 
+      <input id="address" size="30" type="text" value="טרומפלדור 55 תל אביב" />
+      <input type="button" value="Go !" onclick="codeAddress()">
+      <input type="text" name="" value="Search by name">
+      Meet : 
+      <select id='meetbox' onchange=javascript:show(document.search_bar.meetbox.value)>
+        <option value="0">Women</option>
+        <option value="1">Men</option>
+        <option selected value="2">Trans</option>
+        <option selected value="3">All</option>
+      </select>
+    </form>
+    </div>
+  <hr />
+  <table border="1"  width="100%">
+  <tr><!-- Row 1 -->
+   <td id="side_bar_col" style="display:'none' width:10%"><div id="side_bar" align="center" style=" height: 450px"></div></td><!-- Col 1 -->
+   <td style="width:90%"><div id="map_canvas" style="width: 100%; height: 450px">/div></td><!-- Col 2 -->
+  </tr>
+  </table>
+    <select name="server-room" id="server-room" >
+      <option  selected="selected" value="room1">Room 1</option>
+      <option value="room2">Room 2</option>
+      <option value="room3">Room 3</option>
+    </select>
+    <div id="messages"></div>
+    <input type="text" id="text-input">
+    <input type="button" value="Send" id="send-button">
+
+
+  </body>
+</html>

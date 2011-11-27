@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>nowjs test</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="/nowjs/now.js"></script>
+
+<script>
+
+$(document).ready(function(){
+ 
+now.receiveMessage = function(usr_info , message){
+    $("#messages").append("<br>" + usr_info + ": " + message);
+  }
+
+
+$('#server-room').change(function(){
+    alert('changning rooms');
+    $("#messages").html('');
+    now.changeRoom($('#server-room').val());
+    now.serverRoom = $('#server-room').val();
+});
+
+    alert('xx');
+    // By default pick the first chatroom
+    now.usr_name = prompt("What's your name?", "");
+    now.serverRoom = $('#server-room').val();
+    now.changeRoom($('#server-room').val());
+    alert(now.serverRoom);
+
+$("#send-button").click(function(){
+    now.distributeMessage($("#text-input").val());
+    $("#text-input").val("");
+  });
+
+});
+
+
+
+
+
+
+
+
+
+
+</script>
+</head>
+
+<body>
+  <select name="server-room" id="server-room" >
+      <option  selected="selected" value="room1">Room 1</option>
+      <option value="room2">Room 2</option>
+      <option value="room3">Room 3</option>
+  </select>
+  <div id="messages"></div>
+  <input type="text" id="text-input">
+  <input type="button" value="Send" id="send-button">
+</body>
+</html>

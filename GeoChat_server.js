@@ -1,0 +1,80 @@
+
+
+var html = require('fs').readFileSync(__dirname+'/GeoChat2.html');
+
+
+var server = require('http').createServer(function(req, res){
+  console.log('Running');
+  res.end(html);
+});
+server.listen(8080);
+
+var nowjs = require('now');
+var everyone = nowjs.initialize(server);
+
+var listOfRooms =[] ;
+
+//everyone.now.distributeMessage = function(message){
+//  console.log(message);
+//  everyone.now.receiveMessage(this.now.usr_name, this.now.currentRoom, message);
+//};
+
+// Send message to everyone in the users group
+everyone.now.distributeMessage = function(message){
+    console.log(message);
+    var group = nowjs.getGroup(this.now.currentRoom);
+    group.now.receiveMessage(this.now.usr_name+'@'+this.now.currentRoom, message);
+};
+
+everyone.now.changeRoom = function(newRoom){
+    var oldRoom = this.now.currentRoom;
+    //if old room is not null; then leave the old room
+    if(oldRoom){
+        var oldGroup = nowjs.getGroup(oldRoom);
+        oldGroup.removeUser(this.user.clientId);
+        //If last usr is leaving the group -> remove the marker from all usrs
+        oldGroup.getUsers(function (users) {
+          if (users.length == 0) {
+            console.log(oldRoom + ' is now empty');
+            //remove the room from listOfRooms array
+            var oldRoomIndx = listOfRooms.indexOf(oldRoom);
+            var roomInd = listOfRooms.indexOf(oldRoom);
+            if(roomInd !=-1){
+              listOfRooms.splice(roomInd, 1); // Remove it if really found!
+              everyone.now.roomsList = listOfRooms; 
+              console.log('server worked hard...'); 
+              }
+            }
+        });
+    }
+    // join the new room
+    var newGroup = nowjs.getGroup(newRoom);
+    newGroup.addUser(this.user.clientId);
+    // update the client's currentRoom variable
+    this.now.currentRoom = newRoom;
+    console.log(this.now.usr_name + " just changed from " + oldRoom + " to "+ newRoom);
+};
+
+function RoomOb(lat, lng, roomName, owner, users) {
+    this.lat = lat;
+    this.lng  = lng;
+    this.roomName = roomName;
+    this.owner = owner;
+    this.users =[owner];
+ }
+
+// clinet side object des : Room(lat, lng, roomName, owner, users) {
+everyone.now.launchRoom = function(lat,lng,roomName){
+  var room = new RoomOb(lat, lng, roomName, this.now.usr_name, this.now.usr_name);
+  console.log('appending room...');
+  listOfRooms.push(room);
+  everyone.now.roomsList = listOfRooms; 
+  everyone.now.placeRoom(room);
+  this.now.changeRoom(room.roomName);
+};
+
+
+
+
+
+

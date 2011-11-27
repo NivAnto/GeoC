@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>nowjs test</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="/nowjs/now.js"></script>
+
+<script>
+
+if (jQuery) {  
+    alert('J');
+} else {
+    alert('No J');
+}
+
+// on establishing 'now' connection, set the server room
+now.ready(function(){
+alert('ready');
+    // By default pick the first chatroom
+    //now.name = prompt("What's your name?", "");
+    console.log(now.name);
+    //now.changeRoom($('#server-room').val());
+    console.log('Logged into default room');
+    console.log($('#server-room').val());
+});
+
+$(document).ready(function(){
+// On change of drop down, clear text and change server room
+$('#server-room').change(function(){
+    alert('changning rooms');
+    $("#messages").html('');
+    now.changeRoom($('#server-room').val());
+});
+});
+
+
+
+</script>
+</head>
+
+<body>
+  <select name="server-room" id="server-room">
+      <option  selected="selected" value="room1">Room 1</option>
+      <option value="room2">Room 2</option>
+      <option value="room3">Room 3</option>
+  </select>
+  <div id="messages"></div>
+  <input type="text" id="text-input">
+  <input type="button" value="Send" id="send-button">
+</body>
+</html>
